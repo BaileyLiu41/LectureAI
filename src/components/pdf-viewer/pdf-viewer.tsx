@@ -176,6 +176,7 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
             {Array.from({ length: numPages }, (_, index) => (
               <div
                 key={`page_${index + 1}`}
+                data-page-number={index + 1}
                 className={cn(
                   'shadow-lg bg-white relative',
                   isScreenshotMode && 'cursor-crosshair'
@@ -187,7 +188,6 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
                   className="select-text"
-                  data-page-number={index + 1}
                 />
                 {isScreenshotMode && (
                   <ScreenshotOverlay
