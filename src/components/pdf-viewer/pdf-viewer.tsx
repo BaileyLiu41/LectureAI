@@ -19,6 +19,7 @@ interface PdfViewerProps {
   url: string;
   documentId: string;
   onAddToChat: (context: ChatContext) => void;
+  onPdfTextExtracted?: (text: string) => void;
 }
 
 interface SelectionData {
@@ -27,7 +28,7 @@ interface SelectionData {
   position: { x: number; y: number };
 }
 
-export function PdfViewer({ url, documentId, onAddToChat }: PdfViewerProps) {
+export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1.0);
@@ -37,9 +38,30 @@ export function PdfViewer({ url, documentId, onAddToChat }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+  const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setIsLoading(false);
+
+    // Extract text from PDF for AI context
+    if (onPdfTextExtracted) {
+      try {
+        const pdf = await pdfjs.getDocument(url).promise;
+        let fullText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => ('str' in item ? (item as { str: string }).str : ''))
+            .join(' ');
+          fullText += `\n--- Page ${i} ---\n${pageText}`;
+        }
+
+        onPdfTextExtracted(fullText.trim());
+      } catch (err) {
+        console.error('Error extracting PDF text:', err);
+      }
+    }
   };
 
   const handleTextSelection = useCallback(() => {
@@ -127,7 +149,7 @@ export function PdfViewer({ url, documentId, onAddToChat }: PdfViewerProps) {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
-        onScreenshotMode={() => setIsScreenshotMode(true)}
+        onScreenshotMode={() => setIsScreenshotMode(prev => !prev)}
         isScreenshotMode={isScreenshotMode}
       />
 

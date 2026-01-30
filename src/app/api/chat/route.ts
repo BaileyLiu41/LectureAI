@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       selected_text,
       screenshot_base64,
       page_number,
+      rag_context,
     } = body;
 
     // Build context message if there's selected content
@@ -43,12 +44,17 @@ export async function POST(req: NextRequest) {
       contextMessage += '\n\n[User attached a screenshot from the document]';
     }
 
-    // System prompt for educational assistance
-    const systemPrompt = `You are a helpful AI tutor assisting a student with understanding their lecture materials.
+    // Build system prompt for educational assistance
+    let systemPrompt = `You are a helpful AI tutor assisting a student with understanding their lecture materials.
 Be clear, concise, and educational in your explanations.
 If the student selects text or shares a screenshot, focus your explanation on that specific content.
 Use analogies and examples when helpful.
 If you're explaining math or technical concepts, break them down step by step.`;
+
+    // Add RAG context (relevant document sections) if available
+    if (rag_context) {
+      systemPrompt += `\n\n${rag_context}`;
+    }
 
     if (model_provider === 'openai') {
       const apiKey = profile?.openai_api_key_encrypted;
@@ -65,7 +71,7 @@ If you're explaining math or technical concepts, break them down step by step.`;
       const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemPrompt },
         ...messages.map((msg: { role: string; content: string }) => ({
-          role: msg.role as 'user' | 'assistant',
+          role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content,
         })),
       ];
@@ -143,22 +149,37 @@ If you're explaining math or technical concepts, break them down step by step.`;
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: model_name || 'gemini-1.5-pro' });
 
-      // Build chat history
-      const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      }));
+      // Build chat history - handle system messages by treating them as user context
+      const history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
-      // Add system prompt to history
-      if (history.length === 0 || history[0].role !== 'user') {
-        history.unshift({
-          role: 'user',
-          parts: [{ text: 'Please act as my tutor.' }],
-        });
-        history.splice(1, 0, {
-          role: 'model',
-          parts: [{ text: systemPrompt }],
-        });
+      // Add base system prompt first
+      history.push({
+        role: 'user',
+        parts: [{ text: 'Please act as my tutor.' }],
+      });
+      history.push({
+        role: 'model',
+        parts: [{ text: systemPrompt }],
+      });
+
+      // Add conversation history (excluding the last message which will be sent separately)
+      for (const msg of messages.slice(0, -1)) {
+        if (msg.role === 'system') {
+          // System messages (like PDF context) are added as user context
+          history.push({
+            role: 'user',
+            parts: [{ text: msg.content }],
+          });
+          history.push({
+            role: 'model',
+            parts: [{ text: 'I understand. I will use this document content to help answer your questions.' }],
+          });
+        } else {
+          history.push({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+          });
+        }
       }
 
       const chat = model.startChat({ history });

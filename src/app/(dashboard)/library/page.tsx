@@ -10,6 +10,7 @@ import type { Document } from '@/types';
 export default function LibraryPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const loadDocuments = async () => {
@@ -32,14 +33,24 @@ export default function LibraryPage() {
     setDocuments((prev) => [newDoc, ...prev]);
   };
 
+  // Filter documents based on search query
+  const filteredDocuments = documents.filter((doc) =>
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <>
-      <Header activeTab="documents" />
+      <Header
+        activeTab="documents"
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
       <div className="flex-1 overflow-auto p-6">
         {documents.length === 0 && !isLoading ? (
           <UploadDropzone onUploadComplete={handleUploadComplete} />
         ) : (
-          <DocumentGrid documents={documents} isLoading={isLoading} />
+          <DocumentGrid documents={filteredDocuments} isLoading={isLoading} />
         )}
       </div>
     </>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 
 interface ScreenshotOverlayProps {
@@ -25,6 +25,18 @@ export function ScreenshotOverlay({
   const [isSelecting, setIsSelecting] = useState(false);
   const startPoint = useRef<{ x: number; y: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Handle Escape key to cancel screenshot mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!overlayRef.current) return;

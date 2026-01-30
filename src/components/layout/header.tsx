@@ -9,10 +9,26 @@ import { cn } from '@/lib/utils';
 interface HeaderProps {
   activeTab?: 'documents' | 'chats';
   showTabs?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-export function Header({ activeTab = 'documents', showTabs = true }: HeaderProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+export function Header({
+  activeTab = 'documents',
+  showTabs = true,
+  searchQuery: controlledSearchQuery,
+  onSearchChange,
+}: HeaderProps) {
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const searchQuery = controlledSearchQuery ?? internalSearchQuery;
+
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) {
+      onSearchChange(value);
+    } else {
+      setInternalSearchQuery(value);
+    }
+  };
 
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-background">
@@ -55,7 +71,7 @@ export function Header({ activeTab = 'documents', showTabs = true }: HeaderProps
           type="text"
           placeholder="Search..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-9"
         />
       </div>

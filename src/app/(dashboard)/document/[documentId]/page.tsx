@@ -19,6 +19,7 @@ export default function DocumentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedContext, setSelectedContext] = useState<ChatContext | null>(null);
+  const [pdfText, setPdfText] = useState<string | null>(null);
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -123,6 +124,7 @@ export default function DocumentPage() {
             url={pdfUrl}
             documentId={documentId}
             onAddToChat={handleAddToChat}
+            onPdfTextExtracted={setPdfText}
           />
         </div>
       </div>
@@ -135,6 +137,7 @@ export default function DocumentPage() {
             selectedContext={selectedContext}
             onClearContext={() => setSelectedContext(null)}
             onClose={() => setSidebarOpen(false)}
+            pdfText={pdfText}
           />
         </div>
       )}

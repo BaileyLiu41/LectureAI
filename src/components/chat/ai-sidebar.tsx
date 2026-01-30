@@ -16,6 +16,7 @@ interface AiSidebarProps {
   selectedContext: ChatContext | null;
   onClearContext: () => void;
   onClose: () => void;
+  pdfText?: string | null;
 }
 
 export function AiSidebar({
@@ -23,6 +24,7 @@ export function AiSidebar({
   selectedContext,
   onClearContext,
   onClose,
+  pdfText,
 }: AiSidebarProps) {
   const [modelProvider, setModelProvider] = useState<ModelProvider>('openai');
   const [modelName, setModelName] = useState('gpt-4o');
@@ -33,10 +35,13 @@ export function AiSidebar({
     sendMessage,
     isLoading,
     error,
+    isIndexing,
+    isIndexed,
   } = useChatStream({
     documentId,
     modelProvider,
     modelName,
+    pdfText: pdfText || undefined,
   });
 
   const handleSendMessage = async (content: string) => {
@@ -72,13 +77,23 @@ export function AiSidebar({
         }}
       />
 
+      {/* Indexing status */}
+      {isIndexing && (
+        <div className="mx-4 mt-2 p-2 text-xs text-muted-foreground bg-muted rounded-md flex items-center gap-2">
+          <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          Indexing document for smart search...
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
             <p className="text-sm">
-              Select text or capture a screenshot to ask questions about this document
+              {isIndexed
+                ? 'Ask any question about this document'
+                : 'Select text or capture a screenshot to ask questions about this document'}
             </p>
           </div>
         ) : (

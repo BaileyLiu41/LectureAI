@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from './sidebar';
+import { CreateFolderDialog } from '@/components/library/create-folder-dialog';
 import { createClient } from '@/lib/supabase/client';
 import type { Folder } from '@/types';
 
@@ -32,7 +33,10 @@ export function AppShell({ children }: AppShellProps) {
 
   const handleCreateFolder = () => {
     setShowCreateFolder(true);
-    // TODO: Open create folder dialog
+  };
+
+  const handleFolderCreated = (newFolder: Folder) => {
+    setFolders((prev) => [...prev, newFolder]);
   };
 
   const handleUploadDocument = () => {
@@ -50,6 +54,12 @@ export function AppShell({ children }: AppShellProps) {
       <main className="flex-1 flex flex-col overflow-hidden">
         {children}
       </main>
+
+      <CreateFolderDialog
+        open={showCreateFolder}
+        onClose={() => setShowCreateFolder(false)}
+        onFolderCreated={handleFolderCreated}
+      />
     </div>
   );
 }
