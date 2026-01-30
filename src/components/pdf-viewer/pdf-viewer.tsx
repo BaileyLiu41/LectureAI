@@ -37,6 +37,7 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const [isScreenshotMode, setIsScreenshotMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
+  const justSelectedRef = useRef(false);
 
   const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -67,13 +68,11 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const handleTextSelection = useCallback(() => {
     const windowSelection = window.getSelection();
     if (!windowSelection || windowSelection.isCollapsed) {
-      setSelection(null);
-      return;
+      return; // Don't clear selection here, let click handler do it
     }
 
     const text = windowSelection.toString().trim();
     if (!text) {
-      setSelection(null);
       return;
     }
 
@@ -84,15 +83,24 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
     const pageNum = pageElement?.getAttribute('data-page-number');
 
     if (pageNum && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
+      const container = containerRef.current;
+      const containerRect = container.getBoundingClientRect();
+
+      // Account for scroll offset when positioning the popover
       setSelection({
         text,
         pageNumber: parseInt(pageNum, 10),
         position: {
-          x: rect.left - containerRect.left + rect.width / 2,
-          y: rect.top - containerRect.top - 10,
+          x: rect.left - containerRect.left + rect.width / 2 + container.scrollLeft,
+          y: rect.top - containerRect.top - 10 + container.scrollTop,
         },
       });
+
+      // Mark that we just selected text to prevent immediate click from clearing
+      justSelectedRef.current = true;
+      setTimeout(() => {
+        justSelectedRef.current = false;
+      }, 200);
     }
   }, []);
 
@@ -130,8 +138,12 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   // Clear selection when clicking elsewhere
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
+      // Ignore click if we just finished selecting text
+      if (justSelectedRef.current) return;
+
       if (selection && !(e.target as Element).closest('.selection-popover')) {
         setSelection(null);
+        window.getSelection()?.removeAllRanges();
       }
     };
 
