@@ -1,5 +1,5 @@
 {
-  "name": "lectureai-temp",
+  "name": "lectureai",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,7 +11,22 @@
   "dependencies": {
     "next": "16.1.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "react-pdf": "^9.1.0",
+    "pdfjs-dist": "^4.4.168",
+    "html2canvas": "^1.4.1",
+    "openai": "^4.55.0",
+    "@google/generative-ai": "^0.17.0",
+    "zustand": "^4.5.0",
+    "react-resizable-panels": "^2.1.0",
+    "lucide-react": "^0.436.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "date-fns": "^3.6.0",
+    "zod": "^3.23.0",
+    "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

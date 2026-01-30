@@ -1,65 +1,104 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { BookOpen, FileText, MessageSquare, Camera, FolderOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white">
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
+            <BookOpen className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <span className="text-xl font-semibold">LectureAI</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex items-center gap-4">
+          <Link href="/login">
+            <Button variant="ghost">Sign in</Button>
+          </Link>
+          <Link href="/register">
+            <Button>Get started</Button>
+          </Link>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <main className="max-w-7xl mx-auto px-6 py-20">
+        <div className="text-center max-w-3xl mx-auto">
+          <h1 className="text-5xl font-bold tracking-tight text-foreground mb-6">
+            Understand your lectures
+            <span className="text-primary"> with AI</span>
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Upload your lecture handouts, highlight text or capture diagrams,
+            and get instant AI explanations. Stop struggling with complex concepts.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <Link href="/register">
+              <Button size="lg" className="text-lg px-8">
+                Start learning free
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="text-lg px-8">
+                Sign in
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-24">
+          <FeatureCard
+            icon={<FileText className="h-6 w-6" />}
+            title="Upload PDFs"
+            description="Organize your lecture handouts in folders, just like Google Drive"
+          />
+          <FeatureCard
+            icon={<MessageSquare className="h-6 w-6" />}
+            title="AI Chat"
+            description="Ask questions about any part of your document and get instant explanations"
+          />
+          <FeatureCard
+            icon={<Camera className="h-6 w-6" />}
+            title="Screenshot to AI"
+            description="Capture equations, diagrams, or any content and ask AI to explain it"
+          />
+          <FeatureCard
+            icon={<FolderOpen className="h-6 w-6" />}
+            title="Organized Chats"
+            description="Your chats are organized by document and folder, not just by time"
+          />
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-24">
+        <div className="max-w-7xl mx-auto px-6 py-8 text-center text-muted-foreground">
+          <p>Built with AI to help you learn better</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="p-6 rounded-xl bg-white border border-border hover:shadow-md transition-shadow">
+      <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center text-primary mb-4">
+        {icon}
+      </div>
+      <h3 className="font-semibold text-lg mb-2">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
     </div>
   );
 }
