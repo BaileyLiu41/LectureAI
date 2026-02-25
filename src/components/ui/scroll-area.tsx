@@ -12,7 +12,7 @@ const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
     return (
       <div
         ref={ref}
-        className={cn('relative overflow-auto', className)}
+        className={cn('relative overflow-y-auto overflow-x-hidden', className)}
         {...props}
       >
         {children}

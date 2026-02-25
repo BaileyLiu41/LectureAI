@@ -134,7 +134,7 @@ export default function DocumentPage() {
             </PanelResizeHandle>
 
             <Panel defaultSize={35} minSize={20} maxSize={60}>
-              <div className="h-full">
+              <div className="h-full overflow-hidden">
                 <AiSidebar
                   documentId={documentId}
                   selectedContext={selectedContext}

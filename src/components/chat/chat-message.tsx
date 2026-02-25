@@ -36,7 +36,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const processedContent = normalizeLatex(message.content);
 
   return (
-    <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
+    <div className={cn('flex gap-3 w-full min-w-0', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {/* Avatar */}
       <div
         className={cn(
@@ -54,7 +54,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* Content */}
       <div
         className={cn(
-          'flex flex-col gap-2 max-w-[80%]',
+          'flex flex-col gap-2 min-w-0 max-w-[80%]',
           isUser ? 'items-end' : 'items-start'
         )}
       >
@@ -103,7 +103,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         >
           <div
             className={cn(
-              'prose prose-sm max-w-none break-words',
+              'prose prose-sm max-w-none break-words min-w-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:py-1',
               isUser ? 'prose-invert [&_.katex]:text-primary-foreground' : 'dark:prose-invert'
             )}
           >
