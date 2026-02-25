@@ -1,5 +1,8 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { cn } from '@/lib/utils';
 import { User, Bot, FileText, Image } from 'lucide-react';
 
@@ -16,16 +19,24 @@ interface ChatMessageProps {
   message: Message;
 }
 
+/**
+ * Normalize LaTeX delimiters so remark-math can parse them.
+ * remark-math uses $...$ / $$...$$ — convert the \(...\) and \[...\] variants.
+ */
+function normalizeLatex(content: string): string {
+  // \[...\]  →  $$\n...\n$$  (display / block math)
+  content = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `\n$$\n${math}\n$$\n`);
+  // \(...\)  →  $...$  (inline math)
+  content = content.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
+  return content;
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
+  const processedContent = normalizeLatex(message.content);
 
   return (
-    <div
-      className={cn(
-        'flex gap-3',
-        isUser ? 'flex-row-reverse' : 'flex-row'
-      )}
-    >
+    <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {/* Avatar */}
       <div
         className={cn(
@@ -62,9 +73,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 Screenshot
               </span>
             )}
-            {message.pageNumber && (
-              <span>from page {message.pageNumber}</span>
-            )}
+            {message.pageNumber && <span>from page {message.pageNumber}</span>}
           </div>
         )}
 
@@ -85,17 +94,42 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </blockquote>
         )}
 
-        {/* Message content */}
+        {/* Message content with markdown + LaTeX */}
         <div
           className={cn(
             'rounded-lg px-4 py-2 text-sm',
-            isUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-foreground'
+            isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
           )}
         >
-          <div className="whitespace-pre-wrap break-words">
-            {message.content}
+          <div
+            className={cn(
+              'prose prose-sm max-w-none break-words',
+              isUser ? 'prose-invert [&_.katex]:text-primary-foreground' : 'dark:prose-invert'
+            )}
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={{
+                code({ className, children, ...props }) {
+                  const isBlock = className?.includes('language-');
+                  return isBlock ? (
+                    <code
+                      className={cn('block bg-black/10 rounded p-2 text-xs overflow-x-auto', className)}
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="bg-black/10 rounded px-1 text-xs" {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {processedContent}
+            </ReactMarkdown>
           </div>
         </div>
       </div>

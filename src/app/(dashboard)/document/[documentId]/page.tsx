@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { AiSidebar } from '@/components/chat';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Loader2, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Loader2, ArrowLeft, GripVertical } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import type { Document as DocumentType, ChatContext } from '@/types';
@@ -25,7 +26,6 @@ export default function DocumentPage() {
     const loadDocument = async () => {
       const supabase = createClient();
 
-      // Get document metadata
       const { data: doc, error } = await supabase
         .from('documents')
         .select('*')
@@ -41,16 +41,12 @@ export default function DocumentPage() {
       const typedDoc = doc as unknown as DocumentType;
       setDocument(typedDoc);
 
-      // Get signed URL for the PDF
       const { data: urlData } = await supabase.storage
         .from('documents')
-        .createSignedUrl(typedDoc.file_path, 3600); // 1 hour expiry
+        .createSignedUrl(typedDoc.file_path, 3600);
 
-      if (urlData) {
-        setPdfUrl(urlData.signedUrl);
-      }
+      if (urlData) setPdfUrl(urlData.signedUrl);
 
-      // Update last viewed timestamp
       await supabase
         .from('documents')
         .update({ last_viewed_at: new Date().toISOString() } as never)
@@ -90,57 +86,67 @@ export default function DocumentPage() {
   }
 
   return (
-    <div className="flex h-full">
-      {/* PDF Viewer */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Document header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/library">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <h1 className="font-medium truncate" title={document.title}>
-              {document.title}
-            </h1>
-          </div>
-          {!sidebarOpen && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Open Chat
+    <div className="flex flex-col h-full">
+      {/* Document header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/library">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-          )}
+          </Link>
+          <h1 className="font-medium truncate" title={document.title}>
+            {document.title}
+          </h1>
         </div>
-
-        {/* PDF Viewer */}
-        <div className="flex-1 min-h-0">
-          <PdfViewer
-            url={pdfUrl}
-            documentId={documentId}
-            onAddToChat={handleAddToChat}
-            onPdfTextExtracted={setPdfText}
-          />
-        </div>
+        {!sidebarOpen && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Open Chat
+          </Button>
+        )}
       </div>
 
-      {/* AI Sidebar */}
-      {sidebarOpen && (
-        <div className="w-96 flex-shrink-0">
-          <AiSidebar
-            documentId={documentId}
-            selectedContext={selectedContext}
-            onClearContext={() => setSelectedContext(null)}
-            onClose={() => setSidebarOpen(false)}
-            pdfText={pdfText}
-          />
-        </div>
-      )}
+      {/* Resizable panels */}
+      <PanelGroup direction="horizontal" className="flex-1 min-h-0">
+        {/* PDF panel */}
+        <Panel defaultSize={65} minSize={30}>
+          <div className="h-full min-w-0">
+            <PdfViewer
+              url={pdfUrl}
+              documentId={documentId}
+              onAddToChat={handleAddToChat}
+              onPdfTextExtracted={setPdfText}
+            />
+          </div>
+        </Panel>
+
+        {/* Drag handle + AI sidebar */}
+        {sidebarOpen && (
+          <>
+            <PanelResizeHandle className="group relative flex items-center justify-center w-1.5 bg-border hover:bg-primary/40 transition-colors cursor-col-resize">
+              <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </PanelResizeHandle>
+
+            <Panel defaultSize={35} minSize={20} maxSize={60}>
+              <div className="h-full">
+                <AiSidebar
+                  documentId={documentId}
+                  selectedContext={selectedContext}
+                  onClearContext={() => setSelectedContext(null)}
+                  onClose={() => setSidebarOpen(false)}
+                  pdfText={pdfText}
+                />
+              </div>
+            </Panel>
+          </>
+        )}
+      </PanelGroup>
     </div>
   );
 }

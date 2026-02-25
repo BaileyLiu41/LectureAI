@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 
 interface ScreenshotOverlayProps {
   pageNumber: number;
@@ -26,21 +25,16 @@ export function ScreenshotOverlay({
   const startPoint = useRef<{ x: number; y: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Handle Escape key to cancel screenshot mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCancel();
-      }
+      if (e.key === 'Escape') onCancel();
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!overlayRef.current) return;
-
     const rect = overlayRef.current.getBoundingClientRect();
     startPoint.current = {
       x: e.clientX - rect.left,
@@ -53,17 +47,15 @@ export function ScreenshotOverlay({
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (!isSelecting || !startPoint.current || !overlayRef.current) return;
-
       const rect = overlayRef.current.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
-
-      const x = Math.min(startPoint.current.x, currentX);
-      const y = Math.min(startPoint.current.y, currentY);
-      const width = Math.abs(currentX - startPoint.current.x);
-      const height = Math.abs(currentY - startPoint.current.y);
-
-      setSelection({ startX: x, startY: y, width, height });
+      setSelection({
+        startX: Math.min(startPoint.current.x, currentX),
+        startY: Math.min(startPoint.current.y, currentY),
+        width: Math.abs(currentX - startPoint.current.x),
+        height: Math.abs(currentY - startPoint.current.y),
+      });
     },
     [isSelecting]
   );
@@ -74,32 +66,37 @@ export function ScreenshotOverlay({
       setSelection(null);
       return;
     }
-
     setIsSelecting(false);
 
-    // Find the page canvas element
-    const pageElement = overlayRef.current?.parentElement?.querySelector('canvas');
-    if (!pageElement) {
+    const overlay = overlayRef.current;
+    // react-pdf renders a <canvas> inside the same parent div as the overlay
+    const pageCanvas = overlay?.parentElement?.querySelector('canvas');
+    if (!overlay || !pageCanvas) {
       onCancel();
       return;
     }
 
     try {
-      // Capture the selected region
-      const canvas = await html2canvas(pageElement, {
-        x: selection.startX,
-        y: selection.startY,
-        width: selection.width,
-        height: selection.height,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-      });
+      // The canvas buffer may be larger than its CSS size (devicePixelRatio scaling).
+      // Scale selection coords from CSS pixels → canvas buffer pixels.
+      const scaleX = pageCanvas.width / overlay.clientWidth;
+      const scaleY = pageCanvas.height / overlay.clientHeight;
 
-      const imageData = canvas.toDataURL('image/png');
-      onCapture(imageData, pageNumber);
-    } catch (error) {
-      console.error('Screenshot error:', error);
+      const srcX = Math.round(selection.startX * scaleX);
+      const srcY = Math.round(selection.startY * scaleY);
+      const srcW = Math.round(selection.width * scaleX);
+      const srcH = Math.round(selection.height * scaleY);
+
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = srcW;
+      cropCanvas.height = srcH;
+      const ctx = cropCanvas.getContext('2d');
+      if (!ctx) { onCancel(); return; }
+
+      ctx.drawImage(pageCanvas, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+      onCapture(cropCanvas.toDataURL('image/png'), pageNumber);
+    } catch (err) {
+      console.error('Screenshot error:', err);
       onCancel();
     }
   }, [selection, pageNumber, onCapture, onCancel]);
@@ -118,7 +115,6 @@ export function ScreenshotOverlay({
         }
       }}
     >
-      {/* Selection rectangle */}
       {selection && (
         <div
           className="absolute border-2 border-primary bg-primary/20 pointer-events-none"
@@ -129,7 +125,6 @@ export function ScreenshotOverlay({
             height: selection.height,
           }}
         >
-          {/* Corner indicators */}
           <div className="absolute -left-1 -top-1 w-2 h-2 bg-primary rounded-full" />
           <div className="absolute -right-1 -top-1 w-2 h-2 bg-primary rounded-full" />
           <div className="absolute -left-1 -bottom-1 w-2 h-2 bg-primary rounded-full" />
@@ -137,7 +132,6 @@ export function ScreenshotOverlay({
         </div>
       )}
 
-      {/* Instructions */}
       {!selection && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-background/90 px-4 py-2 rounded-lg shadow-lg text-sm">
