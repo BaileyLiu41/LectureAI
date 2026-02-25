@@ -207,6 +207,11 @@ export function useChatStream({
   // Retrieve relevant chunks for a query
   const retrieveContext = async (query: string): Promise<string> => {
     try {
+      // Extract explicit slide/page number from the query so the retrieval
+      // can supplement vector search with a direct page lookup.
+      const pageMatch = query.match(/(?:slide|page)\s*#?\s*(\d+)/i);
+      const mentionedPage = pageMatch ? parseInt(pageMatch[1], 10) : undefined;
+
       const response = await fetch('/api/embeddings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -214,6 +219,7 @@ export function useChatStream({
           document_id: documentId,
           query,
           match_count: 5,
+          page_number: mentionedPage,
         }),
       });
 

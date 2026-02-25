@@ -128,7 +128,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { document_id, query, match_count = 5 } = await req.json();
+    const { document_id, query, match_count = 5, page_number } = await req.json();
 
     if (!document_id || !query) {
       return NextResponse.json(
@@ -170,7 +170,7 @@ export async function PUT(req: NextRequest) {
       {
         query_embedding: queryEmbedding,
         match_document_id: document_id,
-        match_threshold: 0.5,
+        match_threshold: 0.3,
         match_count: match_count,
       } as never
     );
@@ -183,7 +183,31 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ chunks: chunks || [] });
+    let results: Array<{ id: string; chunk_index: number; content: string; token_count: number; similarity: number }> = chunks || [];
+
+    // When the query explicitly mentions a page/slide number, supplement vector
+    // results with a direct text search for that page's chunks so slide-number
+    // queries always get relevant content even when semantic similarity is low.
+    if (page_number) {
+      const pageMarker = `--- Page ${page_number} ---`;
+      const { data: pageChunks } = await supabase
+        .from('document_chunks')
+        .select('id, chunk_index, content, token_count')
+        .eq('document_id', document_id)
+        .ilike('content', `%${pageMarker}%`)
+        .limit(3);
+
+      if (pageChunks && pageChunks.length > 0) {
+        const existingIds = new Set(results.map((c) => c.id));
+        const newChunks = (pageChunks as Array<{ id: string; chunk_index: number; content: string; token_count: number }>)
+          .filter((c) => !existingIds.has(c.id))
+          .map((c) => ({ ...c, similarity: 1.0 }));
+        // Prepend page-specific chunks so they appear first in context
+        results = [...newChunks, ...results];
+      }
+    }
+
+    return NextResponse.json({ chunks: results });
   } catch (error) {
     console.error('Search API error:', error);
     return NextResponse.json(

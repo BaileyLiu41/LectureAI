@@ -45,11 +45,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Build system prompt for educational assistance
-    let systemPrompt = `You are a helpful AI tutor assisting a student with understanding their lecture materials.
+    let systemPrompt = `You are a helpful AI tutor assisting a student with understanding a PDF lecture document.
 Be clear, concise, and educational in your explanations.
 If the student selects text or shares a screenshot, focus your explanation on that specific content.
 Use analogies and examples when helpful.
-If you're explaining math or technical concepts, break them down step by step.`;
+If you're explaining math or technical concepts, break them down step by step.
+When the student asks about a specific slide or page, refer to the document sections provided below.
+If no content is shown for a particular slide, let the student know and suggest they select text from that slide or use the screenshot tool to share it with you.`;
 
     // Add RAG context (relevant document sections) if available
     if (rag_context) {
