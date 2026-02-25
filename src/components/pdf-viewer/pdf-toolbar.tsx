@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,10 +36,18 @@ export function PdfToolbar({
   onScreenshotMode,
   isScreenshotMode,
 }: PdfToolbarProps) {
-  const handlePageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const page = parseInt(e.target.value, 10);
-    if (page >= 1 && page <= totalPages) {
+  const [inputValue, setInputValue] = useState(String(currentPage));
+
+  useEffect(() => {
+    setInputValue(String(currentPage));
+  }, [currentPage]);
+
+  const commitPageChange = () => {
+    const page = parseInt(inputValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
       onPageChange(page);
+    } else {
+      setInputValue(String(currentPage));
     }
   };
 
@@ -59,8 +68,10 @@ export function PdfToolbar({
             type="number"
             min={1}
             max={totalPages}
-            value={currentPage}
-            onChange={handlePageInput}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onBlur={commitPageChange}
+            onKeyDown={(e) => { if (e.key === 'Enter') commitPageChange(); }}
             className="w-14 h-8 text-center text-sm"
           />
           <span className="text-sm text-muted-foreground">

@@ -38,6 +38,7 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
+  const isUserNavigatingRef = useRef(false);
 
   const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -127,6 +128,55 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.25, 0.5));
   const handleZoomReset = () => setScale(1);
 
+  const handlePageChange = useCallback((page: number) => {
+    isUserNavigatingRef.current = true;
+    setCurrentPage(page);
+  }, []);
+
+  // Scroll to the target page when user navigates via toolbar
+  useEffect(() => {
+    if (!isUserNavigatingRef.current) return;
+    isUserNavigatingRef.current = false;
+    const container = containerRef.current;
+    if (!container) return;
+    const pageEl = container.querySelector(`[data-page-number="${currentPage}"]`);
+    if (pageEl) {
+      pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage]);
+
+  // Track current page as user scrolls
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || numPages === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isUserNavigatingRef.current) return;
+        let bestEntry: IntersectionObserverEntry | null = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry;
+            }
+          }
+        }
+        if (bestEntry) {
+          const pageNum = parseInt(
+            (bestEntry.target as HTMLElement).getAttribute('data-page-number') || '1',
+            10
+          );
+          setCurrentPage(pageNum);
+        }
+      },
+      { root: container, threshold: [0, 0.25, 0.5, 0.75, 1.0] }
+    );
+
+    const pageElements = container.querySelectorAll('[data-page-number]');
+    pageElements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [numPages]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -157,7 +207,7 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
         currentPage={currentPage}
         totalPages={numPages}
         scale={scale}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
