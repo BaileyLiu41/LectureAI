@@ -39,6 +39,7 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const documentRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
   const isUserNavigatingRef = useRef(false);
+  const scrollingToPageRef = useRef(false);
 
   const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -141,40 +142,50 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
     if (!container) return;
     const pageEl = container.querySelector(`[data-page-number="${currentPage}"]`);
     if (pageEl) {
+      scrollingToPageRef.current = true;
       pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Smooth scroll takes ~500ms; suppress tracking until it settles
+      setTimeout(() => { scrollingToPageRef.current = false; }, 800);
     }
   }, [currentPage]);
 
-  // Track current page as user scrolls
+  // Track current page as user scrolls by finding the most-visible page
   useEffect(() => {
     const container = containerRef.current;
     if (!container || numPages === 0) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isUserNavigatingRef.current) return;
-        let bestEntry: IntersectionObserverEntry | null = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
-              bestEntry = entry;
-            }
+    let rafId: number;
+
+    const handleScroll = () => {
+      if (scrollingToPageRef.current) return;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const containerRect = container.getBoundingClientRect();
+        const pages = container.querySelectorAll('[data-page-number]');
+        let bestPage = 1;
+        let bestVisibleHeight = 0;
+
+        for (const page of pages) {
+          const el = page as HTMLElement;
+          const rect = el.getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, containerRect.top);
+          const visibleBottom = Math.min(rect.bottom, containerRect.bottom);
+          const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+          if (visibleHeight > bestVisibleHeight) {
+            bestVisibleHeight = visibleHeight;
+            bestPage = parseInt(el.getAttribute('data-page-number') || '1', 10);
           }
         }
-        if (bestEntry) {
-          const pageNum = parseInt(
-            (bestEntry.target as HTMLElement).getAttribute('data-page-number') || '1',
-            10
-          );
-          setCurrentPage(pageNum);
-        }
-      },
-      { root: container, threshold: [0, 0.25, 0.5, 0.75, 1.0] }
-    );
 
-    const pageElements = container.querySelectorAll('[data-page-number]');
-    pageElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+        setCurrentPage(bestPage);
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, [numPages]);
 
   useEffect(() => {
