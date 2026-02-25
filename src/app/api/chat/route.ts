@@ -50,8 +50,8 @@ Be clear, concise, and educational in your explanations.
 If the student selects text or shares a screenshot, focus your explanation on that specific content.
 Use analogies and examples when helpful.
 If you're explaining math or technical concepts, break them down step by step.
-When the student asks about a specific slide or page, refer to the document sections provided below.
-If no content is shown for a particular slide, let the student know and suggest they select text from that slide or use the screenshot tool to share it with you.`;
+When the student asks about a specific slide or page, use the document sections provided below to answer directly.
+Only ask the student to select text or take a screenshot if the relevant page content is genuinely not available in the sections below.`;
 
     // Add RAG context (relevant document sections) if available
     if (rag_context) {

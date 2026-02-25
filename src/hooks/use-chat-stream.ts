@@ -5,6 +5,17 @@ import { createClient } from '@/lib/supabase/client';
 import { formatChunksAsContext } from '@/lib/rag';
 import type { ChatContext, ModelProvider } from '@/types';
 
+/** Extract a single page's text from the full PDF text blob. */
+function extractPageContent(pdfText: string, pageNum: number): string {
+  const startMarker = `--- Page ${pageNum} ---`;
+  const endMarker = `--- Page ${pageNum + 1} ---`;
+  const startIdx = pdfText.indexOf(startMarker);
+  if (startIdx === -1) return '';
+  const endIdx = pdfText.indexOf(endMarker);
+  const raw = endIdx === -1 ? pdfText.slice(startIdx) : pdfText.slice(startIdx, endIdx);
+  return raw.trim();
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -36,6 +47,11 @@ export function useChatStream({
   const [isIndexed, setIsIndexed] = useState(false);
   const initRef = useRef(false);
   const indexingRef = useRef(false);
+  const pdfTextRef = useRef<string | undefined>(pdfText);
+
+  useEffect(() => {
+    pdfTextRef.current = pdfText;
+  }, [pdfText]);
 
   // Load existing chat and messages from Supabase on mount
   useEffect(() => {
@@ -264,6 +280,23 @@ export function useChatStream({
         let ragContext = '';
         if (isIndexed) {
           ragContext = await retrieveContext(content);
+        }
+
+        // Fallback: extract content directly from pdfText when RAG is unavailable
+        // (first visit before indexing, indexing failed, or no OpenAI key for embeddings)
+        if (!ragContext && pdfTextRef.current) {
+          const pageMatch = content.match(/(?:slide|page)\s*#?\s*(\d+)/i);
+          if (pageMatch) {
+            const pageNum = parseInt(pageMatch[1], 10);
+            const pageContent = extractPageContent(pdfTextRef.current, pageNum);
+            if (pageContent) {
+              ragContext = `--- RELEVANT DOCUMENT SECTIONS ---\n\n[Page ${pageNum}]:\n${pageContent}`;
+            }
+          } else {
+            // For general queries use the first 6000 characters of the document
+            const truncated = pdfTextRef.current.slice(0, 6000);
+            ragContext = `--- DOCUMENT CONTENT (partial) ---\n\n${truncated}`;
+          }
         }
 
         // Build messages array for API
