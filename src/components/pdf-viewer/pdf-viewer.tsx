@@ -40,6 +40,10 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   const justSelectedRef = useRef(false);
   const isUserNavigatingRef = useRef(false);
   const scrollingToPageRef = useRef(false);
+  // Ref copy of isScreenshotMode so event-handler closures can read it
+  // without needing to be recreated whenever the state changes.
+  const isScreenshotModeRef = useRef(false);
+  useEffect(() => { isScreenshotModeRef.current = isScreenshotMode; }, [isScreenshotMode]);
 
   const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -68,6 +72,9 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
   };
 
   const handleTextSelection = useCallback(() => {
+    // Never interfere with an active screenshot drag
+    if (isScreenshotModeRef.current) return;
+
     const windowSelection = window.getSelection();
     if (!windowSelection || windowSelection.isCollapsed) {
       return; // Don't clear selection here, let click handler do it
@@ -252,7 +259,10 @@ export function PdfViewer({ url, documentId, onAddToChat, onPdfTextExtracted }: 
                 data-page-number={index + 1}
                 className={cn(
                   'shadow-lg bg-white relative',
-                  isScreenshotMode && 'cursor-crosshair'
+                  // In screenshot mode: suppress pointer events on the text +
+                  // annotation layers so they don't steal events from the overlay,
+                  // and disable text selection so dragging doesn't highlight text.
+                  isScreenshotMode && 'cursor-crosshair select-none [&_.react-pdf__Page__textContent]:pointer-events-none [&_.react-pdf__Page__annotations]:pointer-events-none'
                 )}
               >
                 <Page
