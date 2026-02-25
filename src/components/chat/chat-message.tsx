@@ -98,7 +98,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div
           className={cn(
             'rounded-lg px-4 py-2 text-sm',
-            isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+            isUser
+              ? 'bg-primary text-primary-foreground'
+              // w-full gives the prose content a defined width so break-words works.
+              // overflow-hidden clips anything that still escapes; katex-display
+              // gets its own overflow-x-auto inside so wide math scrolls rather than clips.
+              : 'bg-muted text-foreground w-full overflow-hidden'
           )}
         >
           <div
