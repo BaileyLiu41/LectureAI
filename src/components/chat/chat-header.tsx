@@ -26,7 +26,10 @@ export function ChatHeader({
   onModelChange,
 }: ChatHeaderProps) {
   return (
-    <div className="flex items-center gap-1 px-4 py-2 border-b border-border overflow-x-auto">
+    <div
+      className="flex items-center gap-1 px-4 py-2 border-b border-border overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      aria-label="AI model selector"
+    >
       {models.map((model) => (
         <Button
           key={`${model.provider}-${model.name}`}
