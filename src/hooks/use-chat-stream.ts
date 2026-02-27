@@ -22,6 +22,7 @@ interface Message {
   content: string;
   selectedText?: string;
   screenshot?: string;
+  hasScreenshot?: boolean; // persisted flag: true if this message had a screenshot
   pageNumber?: number;
 }
 
@@ -108,6 +109,7 @@ export function useChatStream({
             role: string;
             content: string;
             selected_text: string | null;
+            screenshot_path: string | null;
             page_number: number | null;
           }>;
           const loadedMessages: Message[] = msgs.map((msg) => ({
@@ -115,6 +117,7 @@ export function useChatStream({
             role: msg.role as 'user' | 'assistant' | 'system',
             content: msg.content,
             selectedText: msg.selected_text || undefined,
+            hasScreenshot: !!msg.screenshot_path,
             pageNumber: msg.page_number || undefined,
           }));
           setMessages(loadedMessages);
@@ -206,6 +209,7 @@ export function useChatStream({
       role: message.role,
       content: message.content,
       selected_text: message.selectedText || null,
+      screenshot_path: message.hasScreenshot ? 'captured' : null,
       page_number: message.pageNumber || null,
     } as never);
 
@@ -260,6 +264,7 @@ export function useChatStream({
         content,
         selectedText: context?.text,
         screenshot: context?.screenshot,
+        hasScreenshot: !!context?.screenshot,
         pageNumber: context?.pageNumber,
       };
 
@@ -299,11 +304,40 @@ export function useChatStream({
           }
         }
 
-        // Build messages array for API
-        const apiMessages = [...messages, userMessage].map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
+        // Build messages array for API, re-injecting stored context for historical messages.
+        const allMessages = [...messages, userMessage];
+
+        // Token budget: keep recent messages within ~12,000 content chars,
+        // always preserving at least the last 4 messages.
+        const MAX_HISTORY_CHARS = 12000;
+        const MIN_KEEP = 4;
+        let charCount = 0;
+        let historyStart = 0;
+        for (let i = allMessages.length - 1; i >= 0; i--) {
+          charCount += allMessages[i].content.length;
+          if (charCount > MAX_HISTORY_CHARS && allMessages.length - i >= MIN_KEEP) {
+            historyStart = i + 1;
+            break;
+          }
+        }
+        const trimmed = allMessages.slice(historyStart);
+
+        const apiMessages = trimmed.map((m, idx) => {
+          let content = m.content;
+          // For historical user messages, re-append any stored context so the model
+          // retains memory of what text/screenshot was being discussed.
+          // The current (last) message's context is handled server-side.
+          const isCurrentMessage = idx === trimmed.length - 1;
+          if (!isCurrentMessage && m.role === 'user') {
+            if (m.selectedText) {
+              content += `\n\n[User selected this text from page ${m.pageNumber ?? 'unknown'}]: "${m.selectedText}"`;
+            }
+            if (m.screenshot || m.hasScreenshot) {
+              content += `\n\n[User shared a screenshot from the document (page ${m.pageNumber ?? 'unknown'})]`;
+            }
+          }
+          return { role: m.role, content };
+        });
 
         const response = await fetch('/api/chat', {
           method: 'POST',

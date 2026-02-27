@@ -149,20 +149,13 @@ Only ask the student to select text or take a screenshot if the relevant page co
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: model_name || 'gemini-1.5-pro' });
+      const model = genAI.getGenerativeModel({
+        model: model_name || 'gemini-1.5-pro',
+        systemInstruction: systemPrompt,
+      });
 
-      // Build chat history - handle system messages by treating them as user context
+      // Build chat history
       const history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
-
-      // Add base system prompt first
-      history.push({
-        role: 'user',
-        parts: [{ text: 'Please act as my tutor.' }],
-      });
-      history.push({
-        role: 'model',
-        parts: [{ text: systemPrompt }],
-      });
 
       // Add conversation history (excluding the last message which will be sent separately)
       for (const msg of messages.slice(0, -1)) {
